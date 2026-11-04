@@ -13,3 +13,6 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# project files
+Project4.json
