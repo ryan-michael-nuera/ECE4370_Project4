@@ -1,19 +1,20 @@
 # % Class to perform interactive rigid or elastic point based registration
-# % ECE 5370: Engineering for Surgery
+# % ECE 4370: Engineering for Surgery
 # % Fall 2024
 # % Author: Prof. Jack Noble; jack.noble@vanderbilt.edu
-#
-from Module2_ImageProc.Demo.volumeViewer import *
+
+from volumeViewer import *
 import numpy as np
 from matplotlib.widgets import Button
 from matplotlib.backend_bases import MouseButton
 import matplotlib.pyplot as plt
+
 # from mayavi import mlab
 import matplotlib.text as txt
-from Module4_Registration.Demo.RigidPointRegister import *
+from RigidPointRegister import *
 from Module4_Registration.ImageProjection import * # you need to implement this
-from Module4_Registration.Demo.ThinPlateSpline import *
-from Module1_DataVis.Demo.vtkWin import *
+from ThinPlateSpline import *
+from vtkWin import *
 
 class evnt:
     def __init__(self):
