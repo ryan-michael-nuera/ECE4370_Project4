@@ -1,235 +1,81 @@
 # Script for Project 4 part 1
 # ECE 4370: Engineering for Surgery
 # Fall 2026
-# Author:   Julia Ke; julia.ke@vanderbilt.edu
-#           Ryan Michael Nuera; ryan.michael.a.nuera@vanderbilt.edu
+# Author:   Ryan Michael Nuera; ryan.michael.a.nuera@vanderbilt.edu
+#           Julia Ke; julia.ke@vanderbilt.edu
 #           Sabra Winston; sabra.m.winston@vanderbilt.edu
-# Coordinate Transformations
+#
+# Apply a sequence of three rigid coordinate transformations to the
+# landmark set 'Proj4landmarks'. Each transformation rotates about x, then
+# y, then z (R = Rz @ Ry @ Rx) by the angles in theta (degrees), then
+# translates by t (mm):  x' = R x + t.
 
 import json
 import numpy as np
 
 
-def rotation_matrix(theta):
-    """
-    Construct a 3D rotation matrix from rotations about
-    x, y, and z.
-
-    theta = [theta_x, theta_y, theta_z] in degrees
-    """
-
-    theta = np.deg2rad(np.asarray(theta, dtype=float))
-
-    tx = theta[0]
-    ty = theta[1]
-    tz = theta[2]
-
-    Rx = np.array([
-        [1, 0, 0],
-        [0, np.cos(tx), -np.sin(tx)],
-        [0, np.sin(tx),  np.cos(tx)]
-    ])
-
-    Ry = np.array([
-        [ np.cos(ty), 0, np.sin(ty)],
-        [0,           1, 0],
-        [-np.sin(ty), 0, np.cos(ty)]
-    ])
-
-    Rz = np.array([
-        [np.cos(tz), -np.sin(tz), 0],
-        [np.sin(tz),  np.cos(tz), 0],
-        [0,           0,          1]
-    ])
-
+def rotationMatrix(theta_deg):
+    """R = Rz @ Ry @ Rx for angles [ax, ay, az] in degrees."""
+    ax, ay, az = np.radians(theta_deg)
+    Rx = np.array([[1, 0, 0],
+                   [0, np.cos(ax), -np.sin(ax)],
+                   [0, np.sin(ax), np.cos(ax)]])
+    Ry = np.array([[np.cos(ay), 0, np.sin(ay)],
+                   [0, 1, 0],
+                   [-np.sin(ay), 0, np.cos(ay)]])
+    Rz = np.array([[np.cos(az), -np.sin(az), 0],
+                   [np.sin(az), np.cos(az), 0],
+                   [0, 0, 1]])
     return Rz @ Ry @ Rx
 
 
-def make_transform(theta, translation):
-    """
-    Construct a 4x4 homogeneous transformation matrix.
-
-    theta       : [rx, ry, rz] degrees
-    translation : [tx, ty, tz] mm
-    """
-
+def rigidTransform(theta_deg, t_mm):
+    """4x4 homogeneous transform: rotate by theta, then translate by t."""
     T = np.eye(4)
-
-    T[:3, :3] = rotation_matrix(theta)
-    T[:3, 3] = np.asarray(translation, dtype=float)
-
+    T[:3, :3] = rotationMatrix(theta_deg)
+    T[:3, 3] = t_mm
     return T
 
 
-def transform_points(points, T):
-    """
-    Transform an Nx3 array of points using a 4x4
-    homogeneous transformation matrix.
-    """
-
-    points = np.asarray(points, dtype=float)
-
-    # Convert Nx3 -> Nx4 homogeneous coordinates
-    points_h = np.column_stack(
-        (points, np.ones(points.shape[0]))
-    )
-
-    # Apply transformation
-    transformed_h = (T @ points_h.T).T
-
-    return transformed_h[:, :3]
+def applyTransform(T, pnts):
+    """Apply 4x4 transform T to an N x 3 array of points."""
+    pnts = np.asarray(pnts, dtype=float)
+    homog = np.hstack((pnts, np.ones((pnts.shape[0], 1))))
+    return (T @ homog.T).T[:, :3]
 
 
-# ============================================================
-# Load Project4.json
-# ============================================================
+if __name__ == "__main__":
+    with open("Project4.json", "r") as f:
+        data = json.load(f)
+    landmarks = np.array(data["Proj4landmarks"], dtype=float)
 
-with open("Project4.json", "r") as f:
-    data = json.load(f)
+    # Transformation parameters: rotation angles (degrees), translation (mm)
+    params = [
+        ([10, -15, 5], [2, -1, 4]),      # Transformation 1
+        ([5, 10, 2], [-1, 4, 0]),        # Transformation 2
+        ([5, 5, -7], [-0.5, -3, -4]),    # Transformation 3
+    ]
 
-landmarks = np.asarray(
-    data["Proj4landmarks"],
-    dtype=float
-)
+    # Compose in order: T3 @ T2 @ T1 (Transformation 1 is applied first)
+    T_total = np.eye(4)
+    for i, (theta, t) in enumerate(params, start=1):
+        Ti = rigidTransform(theta, t)
+        T_total = Ti @ T_total
+        print(f"Transformation {i} (theta = {theta} deg, t = {t} mm):")
+        print(np.round(Ti, 6))
 
+    print("\nComposite transformation T3 @ T2 @ T1:")
+    print(np.round(T_total, 6))
 
-# ============================================================
-# Transformation parameters from the assignment
-# ============================================================
+    result = applyTransform(T_total, landmarks)
 
-theta1 = np.array([
-    10,
-    -15,
-    5
-], dtype=float)
+    np.set_printoptions(precision=8, suppress=True)
+    print("\nOriginal landmarks (mm):")
+    print(landmarks)
+    print("\nTransformed landmarks (mm):")
+    print(result)
 
-t1 = np.array([
-    2,
-    -1,
-    4
-], dtype=float)
-
-
-theta2 = np.array([
-    5,
-    10,
-    2
-], dtype=float)
-
-t2 = np.array([
-    -1,
-    4,
-    0
-], dtype=float)
-
-
-theta3 = np.array([
-    2,
-    5,
-    -7
-], dtype=float)
-
-t3 = np.array([
-    -0.5,
-    -3,
-    -4
-], dtype=float)
-
-
-# ============================================================
-# Construct transformation matrices
-# ============================================================
-
-T1 = make_transform(theta1, t1)
-T2 = make_transform(theta2, t2)
-T3 = make_transform(theta3, t3)
-
-
-# ============================================================
-# Perform transformations SEQUENTIALLY
-#
-# p1 = T1 p
-# p2 = T2 p1
-# p3 = T3 p2
-# ============================================================
-
-points_after_T1 = transform_points(
-    landmarks,
-    T1
-)
-
-points_after_T2 = transform_points(
-    points_after_T1,
-    T2
-)
-
-final_points = transform_points(
-    points_after_T2,
-    T3
-)
-
-
-# Equivalent combined transformation:
-#
-# Ttotal = T3 @ T2 @ T1
-#
-# final_points = transform_points(landmarks, Ttotal)
-
-Ttotal = T3 @ T2 @ T1
-
-
-# ============================================================
-# Print results
-# ============================================================
-
-np.set_printoptions(
-    precision=8,
-    suppress=True
-)
-
-print("\nOriginal landmarks:")
-print(landmarks)
-
-print("\nTransformation 1:")
-print(T1)
-
-print("\nTransformation 2:")
-print(T2)
-
-print("\nTransformation 3:")
-print(T3)
-
-print("\nCombined transformation T3 @ T2 @ T1:")
-print(Ttotal)
-
-print("\nFinal transformed landmarks:")
-print(final_points)
-
-
-# ============================================================
-# Assignment hint check
-# ============================================================
-
-expected = np.array([
-    0.63815515,
-    -0.82001863,
-    0.38204109
-])
-
-print("\nFirst transformed coordinate:")
-print(final_points[0])
-
-print("\nExpected coordinate:")
-print(expected)
-
-print("\nDifference:")
-print(final_points[0] - expected)
-
-print(
-    "\nMatches assignment hint:",
-    np.allclose(
-        final_points[0],
-        expected,
-        atol=1e-6
-    )
-)
+    hint = np.array([0.63815515, -0.82001863, 0.38204109])
+    err = np.linalg.norm(result[0] - hint)
+    print(f"\nFirst point vs hint {hint}: difference {err:.2e} mm "
+          f"({'PASS' if err < 1e-6 else 'CHECK'})")
