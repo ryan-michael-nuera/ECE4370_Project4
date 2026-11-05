@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # from mayavi import mlab
 import matplotlib.text as txt
 from RigidPointRegister import *
-from Module4_Registration.ImageProjection import * # you need to implement this
+from Project4_2 import imageProjection
 from ThinPlateSpline import *
 from vtkWin import *
 
@@ -61,6 +61,8 @@ class ipbrwin:
         self.ft[0].set(visible=True)
         for i in range(15):
             self.ft[i+1] = plt.text(0.1, 1-(i+1)/15, '')
+        if len(self.landmarks) > 0:
+            self.UpdatePointList()
 
         plt.connect('button_press_event', self.on_mouse_click)
         plt.connect('key_press_event', self.on_key_press)
@@ -279,7 +281,7 @@ class interactive_pointBasedRegistration:
 
 
 if __name__ == "__main__":
-    with open('..\\..\\Projects\\Project4\\Project4.json') as f:
+    with open('Project4.json') as f:
         dt = json.load(f)
     ctwarp = np.array(dt['ctwarp']['data'])
     ct = np.array(dt['ct']['data'])
